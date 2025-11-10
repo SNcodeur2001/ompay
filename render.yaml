@@ -8,7 +8,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: true
       - key: APP_KEY
         sync: false # Will be generated during build
       - key: DB_CONNECTION
@@ -55,3 +55,5 @@ services:
         sync: false # Set in Render dashboard to https://your-app-name.onrender.com
       - key: L5_SWAGGER_USE_ABSOLUTE_PATH
         value: false
+      - key: FORCE_HTTPS
+        value: true
