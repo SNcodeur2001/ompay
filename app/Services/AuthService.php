@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Jobs\SendOtpEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -21,6 +22,7 @@ class AuthService
             'nom' => $data['nom'],
             'prenom' => $data['prenom'],
             'telephone' => $data['telephone'],
+            'email' => $data['email'],
             'otp_code' => $otp,
             'otp_expires_at' => now()->addMinutes(10), // OTP expires in 10 minutes
             'is_verified' => false,
@@ -34,8 +36,8 @@ class AuthService
             'qr_code_data' => null, // Will be generated after verification
         ]);
 
-        // Send OTP via SMS (simulated for now)
-        $this->sendOtpSms($user->telephone, $otp);
+        // Send OTP via email asynchronously
+        SendOtpEmail::dispatch($user->email, $otp);
 
         return $user;
     }
@@ -148,13 +150,12 @@ class AuthService
     }
 
     /**
-     * Send OTP via SMS (simulated)
+     * Send OTP via email (asynchronous job)
      */
-    private function sendOtpSms(string $telephone, string $otp): void
+    private function sendOtpEmail(string $email, string $otp): void
     {
-        // TODO: Implement actual SMS sending service
-        // For now, just log the OTP
-        \Log::info("OTP for {$telephone}: {$otp}");
+        // Dispatch the job to send OTP email
+        SendOtpEmail::dispatch($email, $otp);
     }
 
     /**

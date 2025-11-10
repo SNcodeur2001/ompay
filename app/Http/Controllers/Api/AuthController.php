@@ -41,42 +41,44 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/register",
-     *     summary="Inscription d'un nouvel utilisateur",
-     *     description="Crée un compte utilisateur, génère un QR code et envoie un OTP par SMS",
-     *     operationId="register",
-     *     tags={"Authentification"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"nom", "prenom", "telephone"},
-     *             @OA\Property(property="nom", type="string", example="Diop", description="Nom de l'utilisateur"),
-     *             @OA\Property(property="prenom", type="string", example="Amadou", description="Prénom de l'utilisateur"),
-     *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone (9 chiffres)")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Utilisateur créé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Utilisateur créé avec succès. Vérifiez votre téléphone pour le code OTP."),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", example="uuid-string"),
-     *                     @OA\Property(property="nom", type="string", example="Diop"),
-     *                     @OA\Property(property="prenom", type="string", example="Amadou"),
-     *                     @OA\Property(property="telephone", type="string", example="771234567"),
-     *                     @OA\Property(property="is_verified", type="boolean", example=false)
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Erreur lors de l'inscription"
-     *     )
-     * )
+      *     path="/auth/register",
+      *     summary="Inscription d'un nouvel utilisateur",
+      *     description="Crée un compte utilisateur, génère un QR code et envoie un OTP par email",
+      *     operationId="register",
+      *     tags={"Authentification"},
+      *     @OA\RequestBody(
+      *         required=true,
+      *         @OA\JsonContent(
+      *             required={"nom", "prenom", "telephone", "email"},
+      *             @OA\Property(property="nom", type="string", example="Diop", description="Nom de l'utilisateur"),
+      *             @OA\Property(property="prenom", type="string", example="Amadou", description="Prénom de l'utilisateur"),
+      *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone (9 chiffres)"),
+      *             @OA\Property(property="email", type="string", example="amadou.diop@example.com", description="Adresse email de l'utilisateur")
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=201,
+      *         description="Utilisateur créé avec succès",
+      *         @OA\JsonContent(
+      *             @OA\Property(property="success", type="boolean", example=true),
+      *             @OA\Property(property="message", type="string", example="Utilisateur créé avec succès. Vérifiez votre email pour le code OTP."),
+      *             @OA\Property(property="data", type="object",
+      *                 @OA\Property(property="user", type="object",
+      *                     @OA\Property(property="id", type="string", example="uuid-string"),
+      *                     @OA\Property(property="nom", type="string", example="Diop"),
+      *                     @OA\Property(property="prenom", type="string", example="Amadou"),
+      *                     @OA\Property(property="telephone", type="string", example="771234567"),
+      *                     @OA\Property(property="email", type="string", example="amadou.diop@example.com"),
+      *                     @OA\Property(property="is_verified", type="boolean", example=false)
+      *                 )
+      *             )
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=500,
+      *         description="Erreur lors de l'inscription"
+      *     )
+      * )
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -85,7 +87,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Utilisateur créé avec succès. Vérifiez votre téléphone pour le code OTP.',
+                'message' => 'Utilisateur créé avec succès. Vérifiez votre email pour le code OTP.',
                 'data' => [
                     'user' => $user,
                 ]
@@ -101,19 +103,19 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/verify-otp",
-     *     summary="Vérification du code OTP",
-     *     description="Valide le code OTP reçu par SMS et définit un PIN temporaire (0000)",
-     *     operationId="verifyOtp",
-     *     tags={"Authentification"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"telephone", "otp"},
-     *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone"),
-     *             @OA\Property(property="otp", type="string", example="123456", description="Code OTP à 6 chiffres")
-     *         )
-     *     ),
+      *     path="/auth/verify-otp",
+      *     summary="Vérification du code OTP",
+      *     description="Valide le code OTP reçu par email et définit un PIN temporaire (0000)",
+      *     operationId="verifyOtp",
+      *     tags={"Authentification"},
+      *     @OA\RequestBody(
+      *         required=true,
+      *         @OA\JsonContent(
+      *             required={"telephone", "otp"},
+      *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone"),
+      *             @OA\Property(property="otp", type="string", example="123456", description="Code OTP à 6 chiffres")
+      *         )
+      *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Vérification réussie",

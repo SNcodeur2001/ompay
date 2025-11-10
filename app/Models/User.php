@@ -19,6 +19,7 @@ class User extends Authenticatable
         'nom',
         'prenom',
         'telephone',
+        'email',
         'code_pin',
         'type',
         'statut',

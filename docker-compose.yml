@@ -11,6 +11,7 @@ services:
       - "9000:9000"
     depends_on:
       - db
+      - mailpit
   db:
     image: postgres:15
     container_name: back_end_postgres_db
@@ -22,6 +23,12 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+  mailpit:
+    image: axllent/mailpit
+    container_name: back_end_mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   pgdata:

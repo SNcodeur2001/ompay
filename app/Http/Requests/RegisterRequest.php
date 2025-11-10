@@ -23,6 +23,7 @@ class RegisterRequest extends FormRequest
             'nom' => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
             'telephone' => 'required|string|regex:/^[0-9]{9}$/|unique:users,telephone',
+            'email' => 'required|email|unique:users,email',
         ];
     }
 
@@ -37,6 +38,9 @@ class RegisterRequest extends FormRequest
             'telephone.required' => 'Le numéro de téléphone est obligatoire',
             'telephone.regex' => 'Le numéro de téléphone doit contenir 9 chiffres',
             'telephone.unique' => 'Ce numéro de téléphone est déjà utilisé',
+            'email.required' => 'L\'email est obligatoire',
+            'email.email' => 'L\'email doit être une adresse email valide',
+            'email.unique' => 'Cet email est déjà utilisé',
         ];
     }
 }
