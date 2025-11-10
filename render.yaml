@@ -51,3 +51,7 @@ services:
         value: stack
       - key: LOG_LEVEL
         value: error
+      - key: APP_URL
+        sync: false # Set in Render dashboard to https://your-app-name.onrender.com
+      - key: L5_SWAGGER_USE_ABSOLUTE_PATH
+        value: false

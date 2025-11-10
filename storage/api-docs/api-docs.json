@@ -18,7 +18,7 @@
                     "Authentification"
                 ],
                 "summary": "Inscription d'un nouvel utilisateur",
-                "description": "Crée un compte utilisateur, génère un QR code et envoie un OTP par SMS",
+                "description": "Crée un compte utilisateur, génère un QR code et envoie un OTP par email",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -28,7 +28,8 @@
                                 "required": [
                                     "nom",
                                     "prenom",
-                                    "telephone"
+                                    "telephone",
+                                    "email"
                                 ],
                                 "properties": {
                                     "nom": {
@@ -45,6 +46,11 @@
                                         "description": "Numéro de téléphone (9 chiffres)",
                                         "type": "string",
                                         "example": "771234567"
+                                    },
+                                    "email": {
+                                        "description": "Adresse email de l'utilisateur",
+                                        "type": "string",
+                                        "example": "amadou.diop@example.com"
                                     }
                                 },
                                 "type": "object"
@@ -65,7 +71,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Utilisateur créé avec succès. Vérifiez votre téléphone pour le code OTP."
+                                            "example": "Utilisateur créé avec succès. Vérifiez votre email pour le code OTP."
                                         },
                                         "data": {
                                             "properties": {
@@ -86,6 +92,10 @@
                                                         "telephone": {
                                                             "type": "string",
                                                             "example": "771234567"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "amadou.diop@example.com"
                                                         },
                                                         "is_verified": {
                                                             "type": "boolean",
@@ -115,7 +125,7 @@
                     "Authentification"
                 ],
                 "summary": "Vérification du code OTP",
-                "description": "Valide le code OTP reçu par SMS et définit un PIN temporaire (0000)",
+                "description": "Valide le code OTP reçu par email et définit un PIN temporaire (0000)",
                 "operationId": "verifyOtp",
                 "requestBody": {
                     "required": true,
@@ -866,9 +876,9 @@
                                 ],
                                 "properties": {
                                     "numero_destinataire": {
-                                        "description": "Numéro de compte du destinataire",
+                                        "description": "Numéro de téléphone du destinataire",
                                         "type": "string",
-                                        "example": "OM-2025-EF56-GH78"
+                                        "example": "781562041"
                                     },
                                     "montant": {
                                         "description": "Montant du transfert",
