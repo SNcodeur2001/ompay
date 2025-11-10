@@ -9,7 +9,7 @@ fi
 # Generate application key if not set
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
     echo "Generating application key..."
-    php artisan key:generate
+    php artisan key:generate --force
 fi
 
 # Install Passport keys if they don't exist
@@ -28,9 +28,15 @@ chmod 600 app/secrets/oauth/oauth-public.key
 echo "Running database migrations..."
 php artisan migrate --force
 
-# Run seeders
-echo "Running database seeders..."
-php artisan db:seed --force
+# Run seeders only if database is empty
+echo "Checking if database needs seeding..."
+USER_COUNT=$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null || echo "0")
+if [ "$USER_COUNT" = "0" ]; then
+    echo "Running database seeders..."
+    php artisan db:seed --force
+else
+    echo "Database already seeded, skipping..."
+fi
 
 # # Run scheduled jobs
 # echo "Running scheduled jobs..."
@@ -60,7 +66,8 @@ echo "Clearing and caching configuration..."
 php artisan config:clear
 php artisan config:cache
 php artisan route:clear
-php artisan route:cache
+# Skip route caching in production to avoid serialization issues
+# php artisan route:cache
 php artisan view:clear
 php artisan view:cache
 
