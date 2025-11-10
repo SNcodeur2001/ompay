@@ -6,6 +6,12 @@ if [ ! -d "vendor" ]; then
     composer install --no-dev --optimize-autoloader
 fi
 
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo "Creating .env file..."
+    touch .env
+fi
+
 # Generate application key if not set
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
     echo "Generating application key..."
