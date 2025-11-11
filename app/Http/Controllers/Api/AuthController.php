@@ -23,6 +23,11 @@ use Illuminate\Http\JsonResponse;
  *     description="Serveur de développement"
  * )
  *
+ * @OA\Server(
+ *     url="https://ompay-isuf.onrender.com/api",
+ *     description="Serveur de production"
+ * )
+ *
  * @OA\SecurityScheme(
  *     securityScheme="bearerAuth",
  *     type="http",

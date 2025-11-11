@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
+use App\Services\BrevoMailService;
 use Illuminate\Support\Facades\Log;
 
 class SendOtpEmail implements ShouldQueue
@@ -16,14 +16,16 @@ class SendOtpEmail implements ShouldQueue
 
     protected ?string $email;
     protected ?string $otp;
+    protected ?string $name;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(?string $email, ?string $otp)
+    public function __construct(?string $email, ?string $otp, ?string $name = null)
     {
         $this->email = $email;
         $this->otp = $otp;
+        $this->name = $name ?? 'Utilisateur';
     }
 
     /**
@@ -37,13 +39,15 @@ class SendOtpEmail implements ShouldQueue
         }
 
         try {
-            // Send OTP email
-            Mail::raw("Votre code OTP est : {$this->otp}. Ce code expire dans 10 minutes.", function ($message) {
-                $message->to($this->email)
-                        ->subject('Votre code OTP - OM PAY');
-            });
+            // Send OTP email using Brevo
+            $success = BrevoMailService::sendOtp($this->email, $this->name, $this->otp);
 
-            Log::info("OTP email sent to {$this->email}");
+            if (!$success) {
+                Log::error("Failed to send OTP email to {$this->email} via Brevo");
+                throw new \Exception("Brevo API call failed");
+            }
+
+            Log::info("OTP email sent to {$this->email} via Brevo");
         } catch (\Exception $e) {
             Log::error("Failed to send OTP email to {$this->email}: " . $e->getMessage());
             throw $e; // Re-throw to mark job as failed

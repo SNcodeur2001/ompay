@@ -9,6 +9,10 @@
         {
             "url": "http://localhost:8000/api",
             "description": "Serveur de développement"
+        },
+        {
+            "url": "https://ompay-isuf.onrender.com/api",
+            "description": "Serveur de production"
         }
     ],
     "paths": {

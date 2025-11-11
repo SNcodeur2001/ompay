@@ -37,7 +37,7 @@ class AuthService
         ]);
 
         // Send OTP via email asynchronously
-        SendOtpEmail::dispatch($user->email, $otp);
+        SendOtpEmail::dispatch($user->email, $otp, $user->prenom . ' ' . $user->nom);
 
         return $user;
     }
