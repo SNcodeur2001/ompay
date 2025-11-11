@@ -80,12 +80,16 @@ Route::middleware('auth:api')->group(function () {
 
 
  Route::get('/debug-env', function () {
-    return [
-        'BREVO_API_KEY' => env('BREVO_API_KEY'),
-        'MAIL_FROM_ADDRESS' => env('MAIL_FROM_ADDRESS'),
-        'MAIL_FROM_NAME' => env('MAIL_FROM_NAME'),
-    ];
-});
+     return [
+         'BREVO_API_KEY' => env('BREVO_API_KEY') ? 'SET (' . substr(env('BREVO_API_KEY'), 0, 10) . '...)' : 'NOT SET',
+         'BREVO_SENDER_EMAIL' => env('BREVO_SENDER_EMAIL') ?: 'NOT SET',
+         'BREVO_SENDER_NAME' => env('BREVO_SENDER_NAME') ?: 'NOT SET',
+         'MAIL_FROM_ADDRESS' => env('MAIL_FROM_ADDRESS') ?: 'NOT SET',
+         'MAIL_FROM_NAME' => env('MAIL_FROM_NAME') ?: 'NOT SET',
+         'APP_ENV' => env('APP_ENV'),
+         'timestamp' => now()->toISOString(),
+     ];
+ });
 
 
 
