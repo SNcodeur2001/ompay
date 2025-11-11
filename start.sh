@@ -6,10 +6,10 @@ if [ ! -d "vendor" ]; then
     composer install --no-dev --optimize-autoloader
 fi
 
-# Create .env file if it doesn't exist
-if [ ! -f ".env" ]; then
-    echo "Creating .env file..."
-    touch .env
+# Skip .env file creation in production (use system environment variables)
+if [ "$APP_ENV" != "production" ] && [ ! -f ".env" ]; then
+    echo "Creating .env file for development..."
+    cp .env.example .env 2>/dev/null || touch .env
 fi
 
 # Generate application key if not set
