@@ -8,6 +8,7 @@ use App\Repositories\Interfaces\TransactionRepositoryInterface;
 use App\Repositories\Interfaces\CompteRepositoryInterface;
 use App\Http\Requests\PaiementRequest;
 use App\Http\Requests\TransfertRequest;
+use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -18,8 +19,10 @@ use Illuminate\Http\JsonResponse;
  */
 class TransactionController extends Controller
 {
+    use ApiResponseTrait;
+
     private TransactionService $transactionService;
-    private TransactionRepositoryInterface $transactionRepository;
+    private ?TransactionRepositoryInterface $transactionRepository;
     private CompteRepositoryInterface $compteRepository;
 
     public function __construct(
@@ -89,30 +92,21 @@ class TransactionController extends Controller
             $compte = $this->compteRepository->findByUser($user);
 
             if (!$compte) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucun compte trouvé'
-                ], 404);
+                return $this->errorResponse('Aucun compte trouvé', 404);
             }
 
+            $validated = $request->validated();
             $transaction = $this->transactionService->effectuerPaiement(
                 $compte,
-                $request->input('code_marchand'),
-                $request->input('montant')
+                $validated['code_marchand'],
+                (float) $validated['montant']
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Paiement effectué avec succès',
-                'data' => [
-                    'transaction' => $transaction->load(['compteEmetteur', 'marchand'])
-                ]
-            ]);
+            return $this->successResponse([
+                'transaction' => $transaction->load(['compteEmetteur', 'marchand'])
+            ], 'Paiement effectué avec succès');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
@@ -178,30 +172,21 @@ class TransactionController extends Controller
             $compte = $this->compteRepository->findByUser($user);
 
             if (!$compte) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucun compte trouvé'
-                ], 404);
+                return $this->errorResponse('Aucun compte trouvé', 404);
             }
 
+            $validated = $request->validated();
             $transaction = $this->transactionService->effectuerTransfert(
                 $compte,
-                $request->input('numero_destinataire'),
-                $request->input('montant')
+                $validated['numero_destinataire'],
+                (float) $validated['montant']
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Transfert effectué avec succès',
-                'data' => [
-                    'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user'])
-                ]
-            ]);
+            return $this->successResponse([
+                'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user'])
+            ], 'Transfert effectué avec succès');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
@@ -240,18 +225,9 @@ class TransactionController extends Controller
             $user = auth()->user();
             $transactions = $this->transactionRepository->getUserTransactions($user);
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'transactions' => $transactions
-                ]
-            ]);
+            return $this->paginatedResponse($transactions, $transactions, 'Transactions récupérées avec succès');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des transactions',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la récupération des transactions', 500);
         }
     }
 
@@ -320,36 +296,29 @@ class TransactionController extends Controller
             $transaction = $this->transactionRepository->findByReference($reference);
 
             if (!$transaction) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Transaction non trouvée'
-                ], 404);
+                return $this->errorResponse('Transaction non trouvée', 404);
             }
 
             // Vérifier que l'utilisateur a accès à cette transaction
             $user = auth()->user();
-            $hasAccess = $transaction->compte_emetteur_id === $user->compte->id ||
-                         $transaction->compte_destinataire_id === $user->compte->id;
+            $compte = $this->compteRepository->findByUser($user);
 
-            if (!$hasAccess) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé'
-                ], 403);
+            if (!$compte) {
+                return $this->errorResponse('Aucun compte trouvé', 404);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user', 'marchand'])
-                ]
+            $hasAccess = $transaction->compte_emetteur_id === $compte->id ||
+                           $transaction->compte_destinataire_id === $compte->id;
+
+            if (!$hasAccess) {
+                return $this->errorResponse('Accès non autorisé', 403);
+            }
+
+            return $this->successResponse([
+                'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user', 'marchand'])
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération de la transaction',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la récupération de la transaction', 500);
         }
     }
 }

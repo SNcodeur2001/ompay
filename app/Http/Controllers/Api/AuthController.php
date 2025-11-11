@@ -9,6 +9,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\ChangePinRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Requests\SetPinRequest;
+use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -37,6 +38,8 @@ use Illuminate\Http\JsonResponse;
  */
 class AuthController extends Controller
 {
+    use ApiResponseTrait;
+
     private AuthService $authService;
 
     public function __construct(AuthService $authService)
@@ -90,19 +93,13 @@ class AuthController extends Controller
         try {
             $user = $this->authService->register($request->validated());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Utilisateur créé avec succès. Vérifiez votre email pour le code OTP.',
-                'data' => [
-                    'user' => $user,
-                ]
-            ], 201);
+            return $this->successResponse(
+                ['user' => $user],
+                'Utilisateur créé avec succès. Vérifiez votre email pour le code OTP.',
+                201
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'inscription',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de l\'inscription', 500);
         }
     }
 
@@ -151,35 +148,25 @@ class AuthController extends Controller
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
         try {
+            $validated = $request->validated();
             $user = $this->authService->verifyOtp(
-                $request->input('telephone'),
-                $request->input('otp')
+                $validated['telephone'],
+                $validated['otp']
             );
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Code OTP invalide ou expiré'
-                ], 400);
+                return $this->errorResponse('Code OTP invalide ou expiré', 400);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Vérification réussie. Votre PIN temporaire est 0000. Veuillez le changer immédiatement.',
-                'data' => [
-                    'user' => $user,
-                    'access_token' => $user->access_token,
-                    'token_type' => 'Bearer',
-                    'temporary_pin' => '0000',
-                    'requires_pin_change' => true,
-                ]
-            ]);
+            return $this->successResponse([
+                'user' => $user,
+                'access_token' => $user->access_token,
+                'token_type' => 'Bearer',
+                'temporary_pin' => '0000',
+                'requires_pin_change' => true,
+            ], 'Vérification réussie. Votre PIN temporaire est 0000. Veuillez le changer immédiatement.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la vérification OTP',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la vérification OTP', 500);
         }
     }
 
@@ -216,25 +203,16 @@ class AuthController extends Controller
     {
         try {
             $user = auth()->user();
-            $success = $this->authService->setDefinitivePin($user, $request->input('code_pin'));
+            $validated = $request->validated();
+            $success = $this->authService->setDefinitivePin($user, $validated['code_pin']);
 
             if (!$success) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Vous avez déjà défini votre PIN définitif'
-                ], 400);
+                return $this->errorResponse('Vous avez déjà défini votre PIN définitif', 400);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'PIN définitif défini avec succès. Vous pouvez maintenant utiliser votre compte normalement.'
-            ]);
+            return $this->successResponse([], 'PIN définitif défini avec succès. Vous pouvez maintenant utiliser votre compte normalement.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la définition du PIN',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la définition du PIN', 500);
         }
     }
 
@@ -284,33 +262,23 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         try {
+            $validated = $request->validated();
             $user = $this->authService->login(
-                $request->input('telephone'),
-                $request->input('code_pin')
+                $validated['telephone'],
+                $validated['code_pin']
             );
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Téléphone ou code PIN incorrect'
-                ], 401);
+                return $this->errorResponse('Téléphone ou code PIN incorrect', 401);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Connexion réussie',
-                'data' => [
-                    'user' => $user,
-                    'access_token' => $user->access_token,
-                    'token_type' => 'Bearer',
-                ]
-            ]);
+            return $this->successResponse([
+                'user' => $user,
+                'access_token' => $user->access_token,
+                'token_type' => 'Bearer',
+            ], 'Connexion réussie');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la connexion',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la connexion', 500);
         }
     }
 
@@ -341,16 +309,9 @@ class AuthController extends Controller
         try {
             $this->authService->logout(auth()->user());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Déconnexion réussie'
-            ]);
+            return $this->successResponse([], 'Déconnexion réussie');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la déconnexion',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la déconnexion', 500);
         }
     }
 
@@ -387,29 +348,20 @@ class AuthController extends Controller
     public function changePin(ChangePinRequest $request): JsonResponse
     {
         try {
+            $validated = $request->validated();
             $success = $this->authService->changePin(
                 auth()->user(),
-                $request->input('old_pin'),
-                $request->input('new_pin')
+                $validated['old_pin'],
+                $validated['new_pin']
             );
 
             if (!$success) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ancien code PIN incorrect'
-                ], 400);
+                return $this->errorResponse('Ancien code PIN incorrect', 400);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Code PIN modifié avec succès'
-            ]);
+            return $this->successResponse([], 'Code PIN modifié avec succès');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du changement de PIN',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors du changement de PIN', 500);
         }
     }
 
@@ -447,18 +399,11 @@ class AuthController extends Controller
         try {
             $user = $this->authService->getAuthenticatedUser();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'user' => $user->load('compte')
-                ]
+            return $this->successResponse([
+                'user' => $user->load('compte')
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des données utilisateur',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la récupération des données utilisateur', 500);
         }
     }
 
@@ -484,17 +429,13 @@ class AuthController extends Controller
         try {
             $result = \App\Services\BrevoMailService::testConnection();
 
-            return response()->json([
-                'success' => $result['success'],
-                'message' => $result['success'] ? 'Connexion Brevo réussie' : 'Échec de connexion Brevo',
-                'data' => $result
-            ]);
+            if ($result['success']) {
+                return $this->successResponse($result, 'Connexion Brevo réussie');
+            } else {
+                return $this->errorResponse('Échec de connexion Brevo', 500);
+            }
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du test Brevo',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors du test Brevo', 500);
         }
     }
 }

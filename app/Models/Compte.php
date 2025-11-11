@@ -51,6 +51,9 @@ class Compte extends Model
      */
     public function hasSufficientBalance(float $amount): bool
     {
+        if ($amount <= 0) {
+            return false;
+        }
         return $this->solde >= $amount;
     }
 

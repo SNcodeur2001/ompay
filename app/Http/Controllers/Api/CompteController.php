@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\TransactionService;
 use App\Repositories\Interfaces\CompteRepositoryInterface;
 use App\Http\Requests\DepotRequest;
+use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -16,6 +17,8 @@ use Illuminate\Http\JsonResponse;
  */
 class CompteController extends Controller
 {
+    use ApiResponseTrait;
+
     private CompteRepositoryInterface $compteRepository;
     private TransactionService $transactionService;
 
@@ -63,29 +66,19 @@ class CompteController extends Controller
             $compte = $this->compteRepository->findByUser($user);
 
             if (!$compte) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucun compte trouvé'
-                ], 404);
+                return $this->errorResponse('Aucun compte trouvé', 404);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'compte' => [
-                        'numero_compte' => $compte->numero_compte,
-                        'solde' => $compte->solde, // Utilise l'attribut calculé
-                        'qr_code_data' => $compte->qr_code_data,
-                        'created_at' => $compte->created_at,
-                    ]
+            return $this->successResponse([
+                'compte' => [
+                    'numero_compte' => $compte->numero_compte,
+                    'solde' => $compte->solde,
+                    'qr_code_data' => $compte->qr_code_data,
+                    'created_at' => $compte->created_at,
                 ]
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération du compte',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Erreur lors de la récupération du compte', 500);
         }
     }
 
@@ -141,30 +134,21 @@ class CompteController extends Controller
             $compte = $this->compteRepository->findByUser($user);
 
             if (!$compte) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucun compte trouvé'
-                ], 404);
+                return $this->errorResponse('Aucun compte trouvé', 404);
             }
 
+            $validated = $request->validated();
             $transaction = $this->transactionService->effectuerDepot(
                 $compte,
-                $request->input('montant')
+                (float) $validated['montant']
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Dépôt effectué avec succès',
-                'data' => [
-                    'transaction' => $transaction->load('compteDestinataire'),
-                    'nouveau_solde' => $compte->fresh()->solde,
-                ]
-            ]);
+            return $this->successResponse([
+                'transaction' => $transaction->load('compteDestinataire'),
+                'nouveau_solde' => $compte->fresh()->solde,
+            ], 'Dépôt effectué avec succès');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 }
