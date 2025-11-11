@@ -8,6 +8,57 @@ use Illuminate\Support\Facades\Log;
 class BrevoMailService
 {
     /**
+     * Test Brevo API connectivity
+     *
+     * @return array
+     */
+    public static function testConnection()
+    {
+        try {
+            $apiKey = env('BREVO_API_KEY');
+            $senderEmail = env('BREVO_SENDER_EMAIL');
+            $senderName = env('BREVO_SENDER_NAME');
+
+            $configStatus = [
+                'api_key_set' => !empty($apiKey),
+                'sender_email_set' => !empty($senderEmail),
+                'sender_name_set' => !empty($senderName),
+                'api_key_prefix' => $apiKey ? substr($apiKey, 0, 15) . '...' : null,
+                'sender_email' => $senderEmail,
+                'sender_name' => $senderName,
+            ];
+
+            if (!$apiKey || !$senderEmail || !$senderName) {
+                return [
+                    'success' => false,
+                    'message' => 'Configuration manquante',
+                    'config' => $configStatus
+                ];
+            }
+
+            // Test API connectivity with a simple GET request
+            $response = Http::timeout(30)->withHeaders([
+                'api-key' => $apiKey,
+                'Accept' => 'application/json',
+            ])->get('https://api.brevo.com/v3/account');
+
+            return [
+                'success' => $response->successful(),
+                'status_code' => $response->status(),
+                'response_body' => $response->successful() ? $response->json() : $response->body(),
+                'config' => $configStatus
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ];
+        }
+    }
+
+    /**
      * Send OTP email using Brevo API
      *
      * @param string $toEmail
@@ -23,13 +74,14 @@ class BrevoMailService
             $senderName = env('BREVO_SENDER_NAME');
 
             if (!$apiKey || !$senderEmail || !$senderName) {
-                Log::error('Brevo configuration missing');
+                Log::error('Brevo configuration missing - API_KEY: ' . ($apiKey ? 'set' : 'missing') . ', SENDER_EMAIL: ' . ($senderEmail ? 'set' : 'missing') . ', SENDER_NAME: ' . ($senderName ? 'set' : 'missing'));
                 return false;
             }
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(30)->withHeaders([
                 'api-key' => $apiKey,
                 'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
             ])->post('https://api.brevo.com/v3/smtp/email', [
                 'sender' => [
                     'name' => $senderName,
@@ -49,11 +101,15 @@ class BrevoMailService
                 Log::info("OTP email sent successfully to {$toEmail}");
                 return true;
             } else {
-                Log::error("Failed to send OTP email to {$toEmail}: " . $response->body());
+                Log::error("Failed to send OTP email to {$toEmail}: HTTP {$response->status()} - " . $response->body());
+                Log::error("Brevo API Key: " . substr($apiKey, 0, 10) . "...");
+                Log::error("Sender Email: {$senderEmail}");
+                Log::error("Sender Name: {$senderName}");
                 return false;
             }
         } catch (\Exception $e) {
             Log::error("Exception while sending OTP email to {$toEmail}: " . $e->getMessage());
+            Log::error("Exception details: " . $e->getTraceAsString());
             return false;
         }
     }

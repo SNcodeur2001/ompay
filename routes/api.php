@@ -28,6 +28,7 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::get('test-brevo', [AuthController::class, 'testBrevo']);
 });
 
 // Protected routes

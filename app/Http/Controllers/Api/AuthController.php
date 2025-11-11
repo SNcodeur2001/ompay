@@ -461,4 +461,40 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * @OA\Get(
+     *     path="/auth/test-brevo",
+     *     summary="Test de connexion Brevo",
+     *     description="Teste la connectivité avec l'API Brevo",
+     *     operationId="testBrevo",
+     *     tags={"Authentification"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Résultat du test",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Connexion réussie")
+     *         )
+     *     )
+     * )
+     */
+    public function testBrevo(): JsonResponse
+    {
+        try {
+            $result = \App\Services\BrevoMailService::testConnection();
+
+            return response()->json([
+                'success' => $result['success'],
+                'message' => $result['success'] ? 'Connexion Brevo réussie' : 'Échec de connexion Brevo',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du test Brevo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

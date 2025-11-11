@@ -567,6 +567,38 @@
                 ]
             }
         },
+        "/auth/test-brevo": {
+            "get": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Test de connexion Brevo",
+                "description": "Teste la connectivité avec l'API Brevo",
+                "operationId": "testBrevo",
+                "responses": {
+                    "200": {
+                        "description": "Résultat du test",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Connexion réussie"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/compte": {
             "get": {
                 "tags": [
