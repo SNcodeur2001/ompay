@@ -49,12 +49,12 @@
                                     "telephone": {
                                         "description": "Numéro de téléphone (9 chiffres)",
                                         "type": "string",
-                                        "example": "771234567"
+                                        "example": "781562041"
                                     },
                                     "email": {
                                         "description": "Adresse email de l'utilisateur",
                                         "type": "string",
-                                        "example": "amadou.diop@example.com"
+                                        "example": "mapathendiaye542@gmail.com"
                                     }
                                 },
                                 "type": "object"
@@ -76,40 +76,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Utilisateur créé avec succès. Vérifiez votre email pour le code OTP."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "example": "uuid-string"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Amadou"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "771234567"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "example": "amadou.diop@example.com"
-                                                        },
-                                                        "is_verified": {
-                                                            "type": "boolean",
-                                                            "example": false
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -144,7 +110,7 @@
                                     "telephone": {
                                         "description": "Numéro de téléphone",
                                         "type": "string",
-                                        "example": "771234567"
+                                        "example": "781562041"
                                     },
                                     "otp": {
                                         "description": "Code OTP à 6 chiffres",
@@ -311,7 +277,7 @@
                                     "telephone": {
                                         "description": "Numéro de téléphone",
                                         "type": "string",
-                                        "example": "771234567"
+                                        "example": "781562041"
                                     },
                                     "code_pin": {
                                         "description": "Code PIN à 4 chiffres",

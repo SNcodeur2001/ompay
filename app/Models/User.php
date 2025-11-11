@@ -108,4 +108,20 @@ class User extends Authenticatable
                $this->otp_expires_at &&
                $this->otp_expires_at->isFuture();
     }
+
+    /**
+     * Find user for Passport authentication using telephone
+     */
+    public function findForPassport(string $username): User
+    {
+        return $this->where('telephone', $username)->first();
+    }
+
+    /**
+     * Validate user password for Passport (using code_pin)
+     */
+    public function validateForPassportPasswordGrant(string $password): bool
+    {
+        return \Illuminate\Support\Facades\Hash::check($password, $this->code_pin);
+    }
 }

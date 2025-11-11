@@ -44,37 +44,39 @@ class AuthService
 
     /**
      * Verify OTP and set temporary PIN (0000) for first login
-     */
-    public function verifyOtp(string $telephone, string $otp): ?User
-    {
-        $user = User::where('telephone', $telephone)->first();
+      */
+     public function verifyOtp(string $telephone, string $otp): ?User
+     {
+         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->isOtpValid($otp)) {
-            return null;
-        }
+         if (!$user || !$user->isOtpValid($otp)) {
+             return null;
+         }
 
-        // Set temporary PIN (0000) and mark as verified
-        $user->update([
-            'code_pin' => '0000', // PIN temporaire
-            'is_verified' => true,
-            'otp_code' => null,
-            'otp_expires_at' => null,
-        ]);
+         // Set temporary PIN (0000) and mark as verified
+         $user->update([
+             'code_pin' => '0000', // PIN temporaire
+             'is_verified' => true,
+             'otp_code' => null,
+             'otp_expires_at' => null,
+         ]);
 
-        // Generate QR code for compte
-        $compte = $user->compte;
-        if ($compte) {
-            $compte->update([
-                'qr_code_data' => $compte->generateQrCodeData(),
-            ]);
-        }
+         // Generate QR code for compte
+         $compte = $user->compte;
+         if ($compte) {
+             $compte->update([
+                 'qr_code_data' => $compte->generateQrCodeData(),
+             ]);
+         }
 
-        // Create access token
-        $token = $user->createToken('OM Pay API Token')->accessToken;
-        $user->access_token = $token;
+         // Create access token
+         $token = $user->createToken('OM Pay API Token')->accessToken;
 
-        return $user;
-    }
+         // Add token to user for response
+         $user->access_token = $token;
+
+         return $user;
+     }
 
     /**
      * Set definitive PIN after first login with temporary PIN
@@ -165,4 +167,5 @@ class AuthService
     {
         return auth()->user();
     }
+
 }

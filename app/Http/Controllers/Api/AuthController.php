@@ -60,8 +60,8 @@ class AuthController extends Controller
       *             required={"nom", "prenom", "telephone", "email"},
       *             @OA\Property(property="nom", type="string", example="Diop", description="Nom de l'utilisateur"),
       *             @OA\Property(property="prenom", type="string", example="Amadou", description="Prénom de l'utilisateur"),
-      *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone (9 chiffres)"),
-      *             @OA\Property(property="email", type="string", example="amadou.diop@example.com", description="Adresse email de l'utilisateur")
+      *             @OA\Property(property="telephone", type="string", example="781562041", description="Numéro de téléphone (9 chiffres)"),
+      *             @OA\Property(property="email", type="string", example="mapathendiaye542@gmail.com", description="Adresse email de l'utilisateur")
       *         )
       *     ),
       *     @OA\Response(
@@ -104,7 +104,7 @@ class AuthController extends Controller
       *         required=true,
       *         @OA\JsonContent(
       *             required={"telephone", "otp"},
-      *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone"),
+      *             @OA\Property(property="telephone", type="string", example="781562041", description="Numéro de téléphone"),
       *             @OA\Property(property="otp", type="string", example="123456", description="Code OTP à 6 chiffres")
       *         )
       *     ),
@@ -115,17 +115,8 @@ class AuthController extends Controller
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Vérification réussie. Votre PIN temporaire est 0000. Veuillez le changer immédiatement."),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", example="uuid-string"),
-     *                     @OA\Property(property="nom", type="string", example="Diop"),
-     *                     @OA\Property(property="prenom", type="string", example="Amadou"),
-     *                     @OA\Property(property="telephone", type="string", example="771234567"),
-     *                     @OA\Property(property="is_verified", type="boolean", example=true)
-     *                 ),
      *                 @OA\Property(property="access_token", type="string", example="bearer-token-string"),
-     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
-     *                 @OA\Property(property="temporary_pin", type="string", example="0000"),
-     *                 @OA\Property(property="requires_pin_change", type="boolean", example=true)
+     *                 @OA\Property(property="token_type", type="string", example="Bearer")
      *             )
      *         )
      *     ),
@@ -149,11 +140,8 @@ class AuthController extends Controller
             }
 
             return $this->successResponse([
-                'user' => $user,
                 'access_token' => $user->access_token,
                 'token_type' => 'Bearer',
-                'temporary_pin' => '0000',
-                'requires_pin_change' => true,
             ], 'Vérification réussie. Votre PIN temporaire est 0000. Veuillez le changer immédiatement.');
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la vérification OTP', 500);
@@ -217,7 +205,7 @@ class AuthController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             required={"telephone", "code_pin"},
-     *             @OA\Property(property="telephone", type="string", example="771234567", description="Numéro de téléphone"),
+     *             @OA\Property(property="telephone", type="string", example="781562041", description="Numéro de téléphone"),
      *             @OA\Property(property="code_pin", type="string", example="1234", description="Code PIN à 4 chiffres")
      *         )
      *     ),
@@ -228,12 +216,6 @@ class AuthController extends Controller
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Connexion réussie"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", example="uuid-string"),
-     *                     @OA\Property(property="nom", type="string", example="Diop"),
-     *                     @OA\Property(property="prenom", type="string", example="Amadou"),
-     *                     @OA\Property(property="telephone", type="string", example="771234567")
-     *                 ),
      *                 @OA\Property(property="access_token", type="string", example="bearer-token-string"),
      *                 @OA\Property(property="token_type", type="string", example="Bearer")
      *             )
@@ -263,7 +245,6 @@ class AuthController extends Controller
             }
 
             return $this->successResponse([
-                'user' => $user,
                 'access_token' => $user->access_token,
                 'token_type' => 'Bearer',
             ], 'Connexion réussie');
