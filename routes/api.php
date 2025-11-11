@@ -79,7 +79,14 @@ Route::middleware('auth:api')->group(function () {
 
 
 
- 
+ Route::get('/debug-env', function () {
+    return [
+        'BREVO_API_KEY' => env('BREVO_API_KEY'),
+        'MAIL_FROM_ADDRESS' => env('MAIL_FROM_ADDRESS'),
+        'MAIL_FROM_NAME' => env('MAIL_FROM_NAME'),
+    ];
+});
+
 
 
 
