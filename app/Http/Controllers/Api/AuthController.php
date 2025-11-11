@@ -69,17 +69,7 @@ class AuthController extends Controller
       *         description="Utilisateur créé avec succès",
       *         @OA\JsonContent(
       *             @OA\Property(property="success", type="boolean", example=true),
-      *             @OA\Property(property="message", type="string", example="Utilisateur créé avec succès. Vérifiez votre email pour le code OTP."),
-      *             @OA\Property(property="data", type="object",
-      *                 @OA\Property(property="user", type="object",
-      *                     @OA\Property(property="id", type="string", example="uuid-string"),
-      *                     @OA\Property(property="nom", type="string", example="Diop"),
-      *                     @OA\Property(property="prenom", type="string", example="Amadou"),
-      *                     @OA\Property(property="telephone", type="string", example="771234567"),
-      *                     @OA\Property(property="email", type="string", example="amadou.diop@example.com"),
-      *                     @OA\Property(property="is_verified", type="boolean", example=false)
-      *                 )
-      *             )
+      *             @OA\Property(property="message", type="string", example="Utilisateur créé avec succès. Vérifiez votre email pour le code OTP.")
       *         )
       *     ),
       *     @OA\Response(
@@ -94,7 +84,7 @@ class AuthController extends Controller
             $user = $this->authService->register($request->validated());
 
             return $this->successResponse(
-                ['user' => $user],
+                [],
                 'Utilisateur créé avec succès. Vérifiez votre email pour le code OTP.',
                 201
             );
