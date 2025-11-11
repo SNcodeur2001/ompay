@@ -57,3 +57,9 @@ services:
         value: false
       - key: FORCE_HTTPS
         value: true
+      - key: BREVO_API_KEY
+        sync: false # Set in Render dashboard
+      - key: BREVO_SENDER_EMAIL
+        sync: false # Set in Render dashboard
+      - key: BREVO_SENDER_NAME
+        value: "Orange Money"
