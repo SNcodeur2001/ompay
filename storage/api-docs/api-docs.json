@@ -741,14 +741,18 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "code_marchand",
                                     "montant"
                                 ],
                                 "properties": {
                                     "code_marchand": {
-                                        "description": "Code unique du marchand",
+                                        "description": "Code unique du marchand (optionnel si telephone_marchand est fourni)",
                                         "type": "string",
                                         "example": "MARCHAND001"
+                                    },
+                                    "telephone_marchand": {
+                                        "description": "Numéro de téléphone du marchand (optionnel si code_marchand est fourni)",
+                                        "type": "string",
+                                        "example": "781562042"
                                     },
                                     "montant": {
                                         "description": "Montant du paiement",

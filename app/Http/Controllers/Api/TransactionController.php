@@ -8,6 +8,7 @@ use App\Repositories\Interfaces\TransactionRepositoryInterface;
 use App\Repositories\Interfaces\CompteRepositoryInterface;
 use App\Http\Requests\PaiementRequest;
 use App\Http\Requests\TransfertRequest;
+use App\Http\Resources\TransactionResource;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 
@@ -24,6 +25,7 @@ class TransactionController extends Controller
     private TransactionService $transactionService;
     private ?TransactionRepositoryInterface $transactionRepository;
     private CompteRepositoryInterface $compteRepository;
+
 
     public function __construct(
         TransactionService $transactionService,
@@ -53,8 +55,9 @@ class TransactionController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"code_marchand", "montant"},
-     *             @OA\Property(property="code_marchand", type="string", example="MARCHAND001", description="Code unique du marchand"),
+     *             required={"montant"},
+     *             @OA\Property(property="code_marchand", type="string", example="MARCHAND001", description="Code unique du marchand (optionnel si telephone_marchand est fourni)"),
+     *             @OA\Property(property="telephone_marchand", type="string", example="781562042", description="Numéro de téléphone du marchand (optionnel si code_marchand est fourni)"),
      *             @OA\Property(property="montant", type="number", format="float", example=2500.00, description="Montant du paiement")
      *         )
      *     ),
@@ -69,15 +72,10 @@ class TransactionController extends Controller
      *                     @OA\Property(property="reference", type="string", example="TXN-20251110-ABC123"),
      *                     @OA\Property(property="type", type="string", example="paiement"),
      *                     @OA\Property(property="montant", type="number", format="float", example=2500.00),
-     *                     @OA\Property(property="frais", type="number", format="float", example=0),
-     *                     @OA\Property(property="statut", type="string", example="reussi"),
-     *                     @OA\Property(property="compteEmetteur", type="object",
-     *                         @OA\Property(property="numero_compte", type="string", example="OM-2025-AB12-CD34")
-     *                     ),
-     *                     @OA\Property(property="marchand", type="object",
-     *                         @OA\Property(property="raison_sociale", type="string", example="Boutique Express"),
-     *                         @OA\Property(property="code_marchand", type="string", example="MARCHAND001")
-     *                     )
+     *                     @OA\Property(property="date", type="string", format="date-time", example="2025-11-10 09:00:00"),
+     *                     @OA\Property(property="expediteur", type="string", example="Amadou Diop"),
+     *                     @OA\Property(property="destinataire", type="string", example="Boutique Express"),
+     *                     @OA\Property(property="sens_transfert", type="string", enum={"retrait", "depot"}, example="retrait")
      *                 )
      *             )
      *         )
@@ -107,14 +105,29 @@ class TransactionController extends Controller
             }
 
             $validated = $request->validated();
+
+            // Trouver le marchand par code ou téléphone
+            $marchand = null;
+            if (isset($validated['code_marchand'])) {
+                $marchand = \App\Models\Marchand::where('code_marchand', $validated['code_marchand'])->first();
+            } elseif (isset($validated['telephone_marchand'])) {
+                $marchand = \App\Models\Marchand::whereHas('user', function($q) use ($validated) {
+                    $q->where('telephone', $validated['telephone_marchand']);
+                })->first();
+            }
+
+            if (!$marchand) {
+                return $this->errorResponse('Marchand non trouvé', 404);
+            }
+
             $transaction = $this->transactionService->effectuerPaiement(
                 $compte,
-                $validated['code_marchand'],
+                $marchand,
                 (float) $validated['montant']
             );
 
             return $this->successResponse([
-                'transaction' => $transaction->load(['compteEmetteur', 'marchand'])
+                'transaction' => new TransactionResource($transaction->load(['compteEmetteur.user', 'marchand']), $compte)
             ], 'Paiement effectué avec succès');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Aucun compte trouvé', 404);
@@ -157,20 +170,10 @@ class TransactionController extends Controller
      *                     @OA\Property(property="reference", type="string", example="TXN-20251110-DEF456"),
      *                     @OA\Property(property="type", type="string", example="transfert"),
      *                     @OA\Property(property="montant", type="number", format="float", example=10000.00),
-     *                     @OA\Property(property="frais", type="number", format="float", example=100.00),
-     *                     @OA\Property(property="statut", type="string", example="reussi"),
-     *                     @OA\Property(property="compteEmetteur", type="object",
-     *                         @OA\Property(property="user", type="object",
-     *                             @OA\Property(property="nom", type="string", example="Diop"),
-     *                             @OA\Property(property="prenom", type="string", example="Amadou")
-     *                         )
-     *                     ),
-     *                     @OA\Property(property="compteDestinataire", type="object",
-     *                         @OA\Property(property="user", type="object",
-     *                             @OA\Property(property="nom", type="string", example="Sarr"),
-     *                             @OA\Property(property="prenom", type="string", example="Fatou")
-     *                         )
-     *                     )
+     *                     @OA\Property(property="date", type="string", format="date-time", example="2025-11-10 09:00:00"),
+     *                     @OA\Property(property="expediteur", type="string", example="Amadou Diop"),
+     *                     @OA\Property(property="destinataire", type="string", example="Fatou Sarr"),
+     *                     @OA\Property(property="sens_transfert", type="string", enum={"retrait", "depot"}, example="retrait")
      *                 )
      *             )
      *         )
@@ -207,7 +210,7 @@ class TransactionController extends Controller
             );
 
             return $this->successResponse([
-                'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user'])
+                'transaction' => new TransactionResource($transaction->load(['compteEmetteur.user', 'compteDestinataire.user']), $compte)
             ], 'Transfert effectué avec succès');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Aucun compte trouvé', 404);
@@ -242,10 +245,11 @@ class TransactionController extends Controller
      *                         @OA\Property(property="reference", type="string", example="TXN-20251110-ABC123"),
      *                         @OA\Property(property="type", type="string", enum={"paiement", "transfert", "depot"}, example="transfert"),
      *                         @OA\Property(property="montant", type="number", format="float", example=5000.00),
-     *                         @OA\Property(property="frais", type="number", format="float", example=50.00),
-     *                         @OA\Property(property="statut", type="string", enum={"reussi", "echec"}, example="reussi"),
-     *                         @OA\Property(property="created_at", type="string", format="date-time", example="2025-11-10T09:00:00Z")
-     *                     )
+     *                         @OA\Property(property="date", type="string", format="date-time", example="2025-11-10 09:00:00"),
+     *                         @OA\Property(property="expediteur", type="string", example="Amadou Diop"),
+     *                     @OA\Property(property="destinataire", type="string", example="Fatou Sarr"),
+     *                     @OA\Property(property="sens_transfert", type="string", enum={"retrait", "depot"}, example="retrait")
+     *                 )
      *                 )
      *             )
      *         )
@@ -270,9 +274,22 @@ class TransactionController extends Controller
                 return $this->errorResponse('Accès non autorisé', 403);
             }
 
-            $transactions = $compte->transactionsEmises()->orWhere('compte_destinataire_id', $compte->id)->with(['compteEmetteur', 'compteDestinataire', 'marchand'])->get();
+            $transactions = $compte->transactionsEmises()
+                ->orWhere('compte_destinataire_id', $compte->id)
+                ->with([
+                    'compteEmetteur.user:id,nom,prenom,telephone',
+                    'compteDestinataire.user:id,nom,prenom,telephone',
+                    'marchand:id,raison_sociale'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'reference', 'type', 'montant', 'created_at', 'compte_emetteur_id', 'compte_destinataire_id', 'marchand_id']);
 
-            return $this->successResponse(['transactions' => $transactions], 'Transactions récupérées avec succès');
+            // Formater les transactions selon les spécifications
+            $formattedTransactions = $transactions->map(function ($transaction) use ($compte) {
+                return new TransactionResource($transaction, $compte);
+            });
+
+            return $this->successResponse(['transactions' => $formattedTransactions], 'Transactions récupérées avec succès');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
@@ -312,27 +329,11 @@ class TransactionController extends Controller
      *                     @OA\Property(property="reference", type="string", example="TXN-20251110-ABC123"),
      *                     @OA\Property(property="type", type="string", enum={"paiement", "transfert", "depot"}, example="transfert"),
      *                     @OA\Property(property="montant", type="number", format="float", example=5000.00),
-     *                     @OA\Property(property="frais", type="number", format="float", example=50.00),
-     *                     @OA\Property(property="statut", type="string", enum={"reussi", "echec"}, example="reussi"),
-     *                     @OA\Property(property="description", type="string", example="Transfert vers OM-2025-EF56-GH78"),
-     *                     @OA\Property(property="compteEmetteur", type="object",
-     *                         @OA\Property(property="user", type="object",
-     *                             @OA\Property(property="nom", type="string", example="Diop"),
-     *                             @OA\Property(property="prenom", type="string", example="Amadou")
-     *                         )
-     *                     ),
-     *                     @OA\Property(property="compteDestinataire", type="object",
-     *                         @OA\Property(property="user", type="object",
-     *                             @OA\Property(property="nom", type="string", example="Sarr"),
-     *                             @OA\Property(property="prenom", type="string", example="Fatou")
-     *                         )
-     *                     ),
-     *                     @OA\Property(property="marchand", type="object", nullable=true,
-     *                         @OA\Property(property="raison_sociale", type="string", example="Boutique Express"),
-     *                         @OA\Property(property="code_marchand", type="string", example="MARCHAND001")
-     *                     ),
-     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-11-10T09:00:00Z")
-     *                 )
+     *                     @OA\Property(property="date", type="string", format="date-time", example="2025-11-10 09:00:00"),
+     *                     @OA\Property(property="expediteur", type="string", example="Amadou Diop"),
+     *                         @OA\Property(property="destinataire", type="string", example="Fatou Sarr"),
+     *                         @OA\Property(property="sens_transfert", type="string", enum={"retrait", "depot"}, example="retrait")
+     *                     )
      *             )
      *         )
      *     ),
@@ -371,7 +372,7 @@ class TransactionController extends Controller
             }
 
             return $this->successResponse([
-                'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user', 'marchand'])
+                'transaction' => new TransactionResource($transaction->load(['compteEmetteur.user', 'compteDestinataire.user', 'marchand']), $compte)
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Aucun compte trouvé', 404);

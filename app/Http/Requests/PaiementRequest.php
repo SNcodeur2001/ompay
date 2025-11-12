@@ -20,9 +20,40 @@ class PaiementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code_marchand' => 'required|string|exists:marchands,code_marchand',
+            'code_marchand' => 'nullable|string|exists:marchands,code_marchand',
+            'telephone_marchand' => 'nullable|string|regex:/^[0-9]{9}$/',
             'montant' => 'required|numeric|min:100|max:500000',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $codeMarchand = $this->input('code_marchand');
+            $telephoneMarchand = $this->input('telephone_marchand');
+
+            if (!$codeMarchand && !$telephoneMarchand) {
+                $validator->errors()->add('marchand', 'Vous devez fournir soit le code marchand soit le numéro de téléphone du marchand');
+            }
+
+            if ($codeMarchand && $telephoneMarchand) {
+                $validator->errors()->add('marchand', 'Vous ne pouvez fournir qu\'un seul identifiant de marchand');
+            }
+
+            // If telephone is provided, check if it belongs to a marchand
+            if ($telephoneMarchand && !$codeMarchand) {
+                $marchandExists = \App\Models\Marchand::whereHas('user', function($q) use ($telephoneMarchand) {
+                    $q->where('telephone', $telephoneMarchand);
+                })->exists();
+
+                if (!$marchandExists) {
+                    $validator->errors()->add('telephone_marchand', 'Aucun marchand trouvé avec ce numéro de téléphone');
+                }
+            }
+        });
     }
 
     /**
@@ -31,8 +62,8 @@ class PaiementRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code_marchand.required' => 'Le code marchand est obligatoire',
             'code_marchand.exists' => 'Code marchand invalide',
+            'telephone_marchand.regex' => 'Le numéro de téléphone doit contenir exactement 9 chiffres',
             'montant.required' => 'Le montant est obligatoire',
             'montant.numeric' => 'Le montant doit être un nombre',
             'montant.min' => 'Le montant minimum est de 100 FCFA',

@@ -9,6 +9,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\ChangePinRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Requests\SetPinRequest;
+use App\Http\Resources\UserResource;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 
@@ -236,8 +237,22 @@ class AuthController extends Controller
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Connexion réussie"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="access_token", type="string", example="bearer-token-string"),
-     *                 @OA\Property(property="token_type", type="string", example="Bearer")
+     *                 @OA\Property(property="token", type="string", example="bearer-token-string"),
+     *                 @OA\Property(property="user", type="object",
+     *                     @OA\Property(property="id", type="string", example="uuid-string"),
+     *                     @OA\Property(property="nom", type="string", example="Diop"),
+     *                     @OA\Property(property="prenom", type="string", example="Amadou"),
+     *                     @OA\Property(property="telephone", type="string", example="771234567"),
+     *                     @OA\Property(property="email", type="string", example="user@example.com"),
+     *                     @OA\Property(property="type", type="string", example="client"),
+     *                     @OA\Property(property="is_verified", type="boolean", example=true),
+     *                     @OA\Property(property="setup_completed", type="boolean", example=true),
+     *                     @OA\Property(property="compte", type="object",
+     *                         @OA\Property(property="numero_compte", type="string", example="OM-2025-AB12-CD34"),
+     *                         @OA\Property(property="solde", type="number", format="float", example=15000.50),
+     *                         @OA\Property(property="qr_code_data", type="string", example="qr-code-data-string")
+     *                     )
+     *                 )
      *             )
      *         )
      *     ),
@@ -265,9 +280,10 @@ class AuthController extends Controller
                 return $this->errorResponse('Téléphone, code PIN ou code OTP incorrect', 401);
             }
 
+            // Load user relationships and return formatted data
             return $this->successResponse([
-                'access_token' => $user->access_token,
-                'token_type' => 'Bearer',
+                'token' => $user->access_token,
+                'user' => new UserResource($user->load('compte')),
             ], 'Connexion réussie');
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la connexion', 500);
@@ -392,7 +408,7 @@ class AuthController extends Controller
             $user = $this->authService->getAuthenticatedUser();
 
             return $this->successResponse([
-                'user' => $user->load('compte')
+                'user' => new UserResource($user->load('compte'))
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la récupération des données utilisateur', 500);

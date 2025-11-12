@@ -40,17 +40,11 @@ class TransactionService
     /**
      * Effectuer un paiement à un marchand
      */
-    public function effectuerPaiement(Compte $compteEmetteur, string $codeMarchand, float $montant): Transaction
+    public function effectuerPaiement(Compte $compteEmetteur, Marchand $marchand, float $montant): Transaction
     {
-        return DB::transaction(function () use ($compteEmetteur, $codeMarchand, $montant) {
+        return DB::transaction(function () use ($compteEmetteur, $marchand, $montant) {
             // Vérifier les limites
             $this->verifierLimitesPaiement($montant);
-
-            // Trouver le marchand
-            $marchand = Marchand::where('code_marchand', $codeMarchand)->first();
-            if (!$marchand) {
-                throw new Exception('Marchand non trouvé');
-            }
 
             // Calculer les frais (0 pour paiement)
             $frais = 0;
