@@ -37,12 +37,19 @@ class TransactionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/transactions/paiement",
+     *     path="/comptes/{numero_compte}/transactions/paiement",
      *     summary="Effectuer un paiement marchand",
-     *     description="Effectue un paiement vers un marchand en utilisant son code marchand",
+     *     description="Effectue un paiement vers un marchand en utilisant son code marchand depuis le compte spécifié",
      *     operationId="paiement",
      *     tags={"Transactions"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte émetteur",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -80,19 +87,23 @@ class TransactionController extends Controller
      *         description="Erreur de traitement (solde insuffisant, montant invalide, etc.)"
      *     ),
      *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé"
+     *     ),
+     *     @OA\Response(
      *         response=404,
      *         description="Marchand ou compte non trouvé"
      *     )
      * )
      */
-    public function paiement(PaiementRequest $request): JsonResponse
+    public function paiement(string $numero_compte, PaiementRequest $request): JsonResponse
     {
         try {
-            $user = auth()->user();
-            $compte = $this->compteRepository->findByUser($user);
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
 
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
             }
 
             $validated = $request->validated();
@@ -105,6 +116,8 @@ class TransactionController extends Controller
             return $this->successResponse([
                 'transaction' => $transaction->load(['compteEmetteur', 'marchand'])
             ], 'Paiement effectué avec succès');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
@@ -112,12 +125,19 @@ class TransactionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/transactions/transfert",
+     *     path="/comptes/{numero_compte}/transactions/transfert",
      *     summary="Effectuer un transfert P2P",
-     *     description="Transfère de l'argent vers un autre compte utilisateur",
+     *     description="Transfère de l'argent vers un autre compte utilisateur depuis le compte spécifié",
      *     operationId="transfert",
      *     tags={"Transactions"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte émetteur",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      * @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -160,19 +180,23 @@ class TransactionController extends Controller
      *         description="Erreur de traitement (solde insuffisant, montant invalide, etc.)"
      *     ),
      *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé"
+     *     ),
+     *     @OA\Response(
      *         response=404,
      *         description="Destinataire non trouvé"
      *     )
      * )
      */
-    public function transfert(TransfertRequest $request): JsonResponse
+    public function transfert(string $numero_compte, TransfertRequest $request): JsonResponse
     {
         try {
-            $user = auth()->user();
-            $compte = $this->compteRepository->findByUser($user);
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
 
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
             }
 
             $validated = $request->validated();
@@ -185,6 +209,8 @@ class TransactionController extends Controller
             return $this->successResponse([
                 'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user'])
             ], 'Transfert effectué avec succès');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
@@ -192,12 +218,19 @@ class TransactionController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/transactions",
-     *     summary="Liste des transactions de l'utilisateur",
-     *     description="Retourne la liste de toutes les transactions de l'utilisateur connecté",
+     *     path="/comptes/{numero_compte}/transactions",
+     *     summary="Liste des transactions du compte",
+     *     description="Retourne la liste de toutes les transactions du compte spécifié",
      *     operationId="getTransactions",
      *     tags={"Transactions"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Liste des transactions",
@@ -216,16 +249,32 @@ class TransactionController extends Controller
      *                 )
      *             )
      *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Aucun compte trouvé"
      *     )
      * )
      */
-    public function index(): JsonResponse
+    public function index(string $numero_compte): JsonResponse
     {
         try {
-            $user = auth()->user();
-            $transactions = $this->transactionRepository->getUserTransactions($user);
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
 
-            return $this->paginatedResponse($transactions, $transactions, 'Transactions récupérées avec succès');
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
+            }
+
+            $transactions = $compte->transactionsEmises()->orWhere('compte_destinataire_id', $compte->id)->with(['compteEmetteur', 'compteDestinataire', 'marchand'])->get();
+
+            return $this->successResponse(['transactions' => $transactions], 'Transactions récupérées avec succès');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la récupération des transactions', 500);
         }
@@ -233,12 +282,19 @@ class TransactionController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/transactions/{reference}",
+     *     path="/comptes/{numero_compte}/transactions/{reference}",
      *     summary="Détail d'une transaction",
-     *     description="Retourne les détails complets d'une transaction spécifique",
+     *     description="Retourne les détails complets d'une transaction spécifique du compte",
      *     operationId="getTransaction",
      *     tags={"Transactions"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      *     @OA\Parameter(
      *         name="reference",
      *         in="path",
@@ -286,37 +342,39 @@ class TransactionController extends Controller
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Transaction non trouvée"
+     *         description="Transaction ou compte non trouvé"
      *     )
      * )
      */
-    public function show(string $reference): JsonResponse
+    public function show(string $numero_compte, string $reference): JsonResponse
     {
         try {
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
+
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
+            }
+
             $transaction = $this->transactionRepository->findByReference($reference);
 
             if (!$transaction) {
                 return $this->errorResponse('Transaction non trouvée', 404);
             }
 
-            // Vérifier que l'utilisateur a accès à cette transaction
-            $user = auth()->user();
-            $compte = $this->compteRepository->findByUser($user);
-
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
-            }
-
+            // Vérifier que la transaction appartient à ce compte
             $hasAccess = $transaction->compte_emetteur_id === $compte->id ||
                            $transaction->compte_destinataire_id === $compte->id;
 
             if (!$hasAccess) {
-                return $this->errorResponse('Accès non autorisé', 403);
+                return $this->errorResponse('Accès non autorisé à cette transaction', 403);
             }
 
             return $this->successResponse([
                 'transaction' => $transaction->load(['compteEmetteur.user', 'compteDestinataire.user', 'marchand'])
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la récupération de la transaction', 500);
         }

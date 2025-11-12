@@ -140,31 +140,6 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "example": "uuid-string"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Amadou"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "771234567"
-                                                        },
-                                                        "is_verified": {
-                                                            "type": "boolean",
-                                                            "example": true
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
                                                 "access_token": {
                                                     "type": "string",
                                                     "example": "bearer-token-string"
@@ -172,14 +147,6 @@
                                                 "token_type": {
                                                     "type": "string",
                                                     "example": "Bearer"
-                                                },
-                                                "temporary_pin": {
-                                                    "type": "string",
-                                                    "example": "0000"
-                                                },
-                                                "requires_pin_change": {
-                                                    "type": "boolean",
-                                                    "example": true
                                                 }
                                             },
                                             "type": "object"
@@ -262,7 +229,7 @@
                     "Authentification"
                 ],
                 "summary": "Connexion utilisateur",
-                "description": "Authentifie un utilisateur vérifié avec son numéro de téléphone et code PIN",
+                "description": "Authentifie un utilisateur vérifié avec son numéro de téléphone et code PIN (ou OTP pour la première connexion)",
                 "operationId": "login",
                 "requestBody": {
                     "required": true,
@@ -270,8 +237,7 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "telephone",
-                                    "code_pin"
+                                    "telephone"
                                 ],
                                 "properties": {
                                     "telephone": {
@@ -280,9 +246,14 @@
                                         "example": "781562041"
                                     },
                                     "code_pin": {
-                                        "description": "Code PIN à 4 chiffres",
+                                        "description": "Code PIN à 4 chiffres (pour les connexions après définition du PIN)",
                                         "type": "string",
                                         "example": "1234"
+                                    },
+                                    "otp": {
+                                        "description": "Code OTP à 6 chiffres (pour la première connexion après vérification)",
+                                        "type": "string",
+                                        "example": "123456"
                                     }
                                 },
                                 "type": "object"
@@ -307,27 +278,6 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "example": "uuid-string"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Amadou"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "771234567"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
                                                 "access_token": {
                                                     "type": "string",
                                                     "example": "bearer-token-string"
@@ -565,14 +515,26 @@
                 }
             }
         },
-        "/compte": {
+        "/comptes/{numero_compte}": {
             "get": {
                 "tags": [
                     "Comptes"
                 ],
                 "summary": "Informations du compte utilisateur",
-                "description": "Retourne les informations du compte de l'utilisateur connecté incluant le solde calculé",
+                "description": "Retourne les informations du compte spécifié incluant le solde calculé",
                 "operationId": "getCompte",
+                "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Informations du compte",
@@ -619,6 +581,9 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
                     "404": {
                         "description": "Aucun compte trouvé"
                     }
@@ -630,14 +595,26 @@
                 ]
             }
         },
-        "/compte/depot": {
+        "/comptes/{numero_compte}/depot": {
             "post": {
                 "tags": [
                     "Comptes"
                 ],
                 "summary": "Effectuer un dépôt d'argent",
-                "description": "Crédite le compte de l'utilisateur avec le montant spécifié",
+                "description": "Crédite le compte spécifié avec le montant spécifié",
                 "operationId": "depot",
+                "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -724,6 +701,9 @@
                     "400": {
                         "description": "Montant invalide ou erreur de traitement"
                     },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
                     "404": {
                         "description": "Aucun compte trouvé"
                     }
@@ -735,14 +715,26 @@
                 ]
             }
         },
-        "/transactions/paiement": {
+        "/comptes/{numero_compte}/transactions/paiement": {
             "post": {
                 "tags": [
                     "Transactions"
                 ],
                 "summary": "Effectuer un paiement marchand",
-                "description": "Effectue un paiement vers un marchand en utilisant son code marchand",
+                "description": "Effectue un paiement vers un marchand en utilisant son code marchand depuis le compte spécifié",
                 "operationId": "paiement",
+                "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte émetteur",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -848,6 +840,9 @@
                     "400": {
                         "description": "Erreur de traitement (solde insuffisant, montant invalide, etc.)"
                     },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
                     "404": {
                         "description": "Marchand ou compte non trouvé"
                     }
@@ -859,14 +854,26 @@
                 ]
             }
         },
-        "/transactions/transfert": {
+        "/comptes/{numero_compte}/transactions/transfert": {
             "post": {
                 "tags": [
                     "Transactions"
                 ],
                 "summary": "Effectuer un transfert P2P",
-                "description": "Transfère de l'argent vers un autre compte utilisateur",
+                "description": "Transfère de l'argent vers un autre compte utilisateur depuis le compte spécifié",
                 "operationId": "transfert",
+                "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte émetteur",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -986,6 +993,9 @@
                     "400": {
                         "description": "Erreur de traitement (solde insuffisant, montant invalide, etc.)"
                     },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
                     "404": {
                         "description": "Destinataire non trouvé"
                     }
@@ -997,14 +1007,26 @@
                 ]
             }
         },
-        "/transactions": {
+        "/comptes/{numero_compte}/transactions": {
             "get": {
                 "tags": [
                     "Transactions"
                 ],
-                "summary": "Liste des transactions de l'utilisateur",
-                "description": "Retourne la liste de toutes les transactions de l'utilisateur connecté",
+                "summary": "Liste des transactions du compte",
+                "description": "Retourne la liste de toutes les transactions du compte spécifié",
                 "operationId": "getTransactions",
+                "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Liste des transactions",
@@ -1070,6 +1092,12 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
+                    "404": {
+                        "description": "Aucun compte trouvé"
                     }
                 },
                 "security": [
@@ -1079,15 +1107,25 @@
                 ]
             }
         },
-        "/transactions/{reference}": {
+        "/comptes/{numero_compte}/transactions/{reference}": {
             "get": {
                 "tags": [
                     "Transactions"
                 ],
                 "summary": "Détail d'une transaction",
-                "description": "Retourne les détails complets d'une transaction spécifique",
+                "description": "Retourne les détails complets d'une transaction spécifique du compte",
                 "operationId": "getTransaction",
                 "parameters": [
+                    {
+                        "name": "numero_compte",
+                        "in": "path",
+                        "description": "Numéro du compte",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "OM-2025-AB12-CD34"
+                        }
+                    },
                     {
                         "name": "reference",
                         "in": "path",
@@ -1220,7 +1258,7 @@
                         "description": "Accès non autorisé à cette transaction"
                     },
                     "404": {
-                        "description": "Transaction non trouvée"
+                        "description": "Transaction ou compte non trouvé"
                     }
                 },
                 "security": [

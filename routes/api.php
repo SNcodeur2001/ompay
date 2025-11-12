@@ -41,16 +41,18 @@ Route::middleware('auth:api')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
     });
 
-    // Compte routes
-    Route::get('compte', [CompteController::class, 'show']);
-    Route::post('compte/depot', [CompteController::class, 'depot']);
+    // Compte routes with numero_compte
+    Route::prefix('comptes/{numero_compte}')->group(function () {
+        Route::get('/', [CompteController::class, 'show']);
+        Route::post('depot', [CompteController::class, 'depot']);
 
-    // Transaction routes
-    Route::prefix('transactions')->group(function () {
-        Route::post('paiement', [TransactionController::class, 'paiement']);
-        Route::post('transfert', [TransactionController::class, 'transfert']);
-        Route::get('/', [TransactionController::class, 'index']);
-        Route::get('{reference}', [TransactionController::class, 'show']);
+        // Transaction routes scoped to account
+        Route::prefix('transactions')->group(function () {
+            Route::post('paiement', [TransactionController::class, 'paiement']);
+            Route::post('transfert', [TransactionController::class, 'transfert']);
+            Route::get('/', [TransactionController::class, 'index']);
+            Route::get('{reference}', [TransactionController::class, 'show']);
+        });
     });
 });
 

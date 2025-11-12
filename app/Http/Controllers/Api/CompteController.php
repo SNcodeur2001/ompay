@@ -32,12 +32,19 @@ class CompteController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/compte",
+     *     path="/comptes/{numero_compte}",
      *     summary="Informations du compte utilisateur",
-     *     description="Retourne les informations du compte de l'utilisateur connecté incluant le solde calculé",
+     *     description="Retourne les informations du compte spécifié incluant le solde calculé",
      *     operationId="getCompte",
      *     tags={"Comptes"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Informations du compte",
@@ -54,19 +61,23 @@ class CompteController extends Controller
      *         )
      *     ),
      *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé"
+     *     ),
+     *     @OA\Response(
      *         response=404,
      *         description="Aucun compte trouvé"
      *     )
      * )
      */
-    public function show(): JsonResponse
+    public function show(string $numero_compte): JsonResponse
     {
         try {
-            $user = auth()->user();
-            $compte = $this->compteRepository->findByUser($user);
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
 
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
             }
 
             return $this->successResponse([
@@ -77,6 +88,8 @@ class CompteController extends Controller
                     'created_at' => $compte->created_at,
                 ]
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse('Erreur lors de la récupération du compte', 500);
         }
@@ -84,12 +97,19 @@ class CompteController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/compte/depot",
+     *     path="/comptes/{numero_compte}/depot",
      *     summary="Effectuer un dépôt d'argent",
-     *     description="Crédite le compte de l'utilisateur avec le montant spécifié",
+     *     description="Crédite le compte spécifié avec le montant spécifié",
      *     operationId="depot",
      *     tags={"Comptes"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numero_compte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte",
+     *         @OA\Schema(type="string", example="OM-2025-AB12-CD34")
+     *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -122,19 +142,23 @@ class CompteController extends Controller
      *         description="Montant invalide ou erreur de traitement"
      *     ),
      *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé"
+     *     ),
+     *     @OA\Response(
      *         response=404,
      *         description="Aucun compte trouvé"
      *     )
      * )
      */
-    public function depot(DepotRequest $request): JsonResponse
+    public function depot(string $numero_compte, DepotRequest $request): JsonResponse
     {
         try {
-            $user = auth()->user();
-            $compte = $this->compteRepository->findByUser($user);
+            $compte = \App\Models\Compte::where('numero_compte', $numero_compte)->firstOrFail();
 
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
+            // Vérifier que l'utilisateur est propriétaire du compte
+            if ($compte->user_id !== auth()->id()) {
+                return $this->errorResponse('Accès non autorisé', 403);
             }
 
             $validated = $request->validated();
@@ -147,6 +171,8 @@ class CompteController extends Controller
                 'transaction' => $transaction->load('compteDestinataire'),
                 'nouveau_solde' => $compte->fresh()->solde,
             ], 'Dépôt effectué avec succès');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Aucun compte trouvé', 404);
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
