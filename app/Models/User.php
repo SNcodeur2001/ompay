@@ -26,6 +26,7 @@ class User extends Authenticatable
         'otp_code',
         'otp_expires_at',
         'is_verified',
+        'setup_completed',
     ];
 
     /**
@@ -39,9 +40,9 @@ class User extends Authenticatable
      * The attributes that should be cast.
      */
     protected $casts = [
-        'code_pin' => 'hashed',
         'otp_expires_at' => 'datetime',
         'is_verified' => 'boolean',
+        'setup_completed' => 'boolean',
     ];
 
     /**

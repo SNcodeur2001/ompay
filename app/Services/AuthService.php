@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Jobs\SendOtpEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AuthService
@@ -55,7 +56,7 @@ class AuthService
 
          // Set temporary PIN (0000) and mark as verified
          $user->update([
-             'code_pin' => '0000', // PIN temporaire
+             'code_pin' => Hash::make('0000'), // PIN temporaire
              'is_verified' => true,
              'otp_code' => null,
              'otp_expires_at' => null,
@@ -83,40 +84,95 @@ class AuthService
      */
     public function setDefinitivePin(User $user, string $newPin): bool
     {
-        // Vérifier que l'utilisateur utilise encore le PIN temporaire
-        if (!Hash::check('0000', $user->code_pin)) {
-            return false; // PIN déjà changé
+        // Allow setting PIN only if setup is not completed
+        if ($user->setup_completed) {
+            return false; // Setup already completed
         }
 
-        $user->update([
-            'code_pin' => $newPin,
+        // Update using raw SQL to ensure proper boolean handling for PostgreSQL
+        DB::update('UPDATE users SET code_pin = ?, setup_completed = true, updated_at = ? WHERE id = ?', [
+            Hash::make($newPin),
+            now(),
+            $user->id
         ]);
+
+        // Refresh the model
+        $user->refresh();
 
         return true;
     }
 
     /**
-     * Login user with PIN (after verification)
+     * Login user with PIN or OTP (for first login after verification)
      */
-    public function login(string $telephone, string $codePin): ?User
-    {
-        $user = User::where('telephone', $telephone)->first();
+    public function login(string $telephone, ?string $codePin = null, ?string $otp = null): ?User
+     {
+         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !Hash::check($codePin, $user->code_pin)) {
-            return null;
+         Log::info("User lookup for {$telephone}", [
+             'user_exists' => !is_null($user),
+             'is_active' => $user ? $user->isActive() : false,
+             'is_verified' => $user ? $user->isVerified() : false,
+             'setup_completed' => $user ? $user->setup_completed : false
+         ]);
+
+         if (!$user || !$user->isActive() || !$user->isVerified()) {
+             Log::warning("User {$telephone} failed initial validation", [
+                 'user_exists' => !is_null($user),
+                 'is_active' => $user ? $user->isActive() : false,
+                 'is_verified' => $user ? $user->isVerified() : false
+             ]);
+             return null;
+         }
+
+        Log::info("Login attempt for user {$user->telephone}", [
+            'setup_completed' => $user->setup_completed,
+            'has_temporary_pin' => Hash::check('0000', $user->code_pin),
+            'current_pin_hash' => $user->code_pin,
+            'provided_otp' => !empty($otp),
+            'provided_pin' => !empty($codePin)
+        ]);
+
+        if (!$user->setup_completed) {
+            // Setup not completed: accept OTP for first login
+            if (!$otp) {
+                Log::warning("User {$user->telephone} tried to login without OTP during setup");
+                return null;
+            }
+
+            // For first login with OTP, proceed (OTP already verified in verifyOtp)
+            Log::info("User {$user->telephone} logging in with OTP (setup not completed)");
+        } else {
+            // Setup completed: require PIN for all subsequent logins
+            if (!$codePin || !Hash::check($codePin, $user->code_pin)) {
+                Log::warning("User {$user->telephone} failed PIN authentication", [
+                    'provided_pin' => $codePin,
+                    'pin_matches' => $codePin ? Hash::check($codePin, $user->code_pin) : false
+                ]);
+                return null;
+            }
+            Log::info("User {$user->telephone} logged in with PIN");
         }
 
-        if (!$user->isActive() || !$user->isVerified()) {
+        Log::info("About to create token for user {$user->telephone}");
+
+        try {
+            // Create access token
+            $token = $user->createToken('OM Pay API Token')->accessToken;
+
+            // Add token to user for response
+            $user->access_token = $token;
+
+            Log::info("Token created successfully for user {$user->telephone}");
+
+            return $user;
+        } catch (\Exception $e) {
+            Log::error("Failed to create token for user {$user->telephone}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return null;
         }
-
-        // Create access token
-        $token = $user->createToken('OM Pay API Token')->accessToken;
-
-        // Add token to user for response
-        $user->access_token = $token;
-
-        return $user;
     }
 
     /**
@@ -129,7 +185,7 @@ class AuthService
         }
 
         $user->update([
-            'code_pin' => $newPin,
+            'code_pin' => Hash::make($newPin),
         ]);
 
         return true;

@@ -181,15 +181,34 @@ class AuthController extends Controller
     {
         try {
             $user = auth()->user();
+            if (!$user) {
+                \Log::error("Set PIN: No authenticated user");
+                return $this->errorResponse('Utilisateur non authentifié', 401);
+            }
+
+            $user = $user->fresh();
             $validated = $request->validated();
+
+            \Log::info("Set PIN attempt for user {$user->telephone}", [
+                'setup_completed' => $user->setup_completed,
+                'current_pin_hash' => $user->code_pin,
+                'new_pin' => $validated['code_pin']
+            ]);
+
             $success = $this->authService->setDefinitivePin($user, $validated['code_pin']);
 
             if (!$success) {
+                \Log::warning("Set PIN failed for user {$user->telephone} - setup already completed");
                 return $this->errorResponse('Vous avez déjà défini votre PIN définitif', 400);
             }
 
+            \Log::info("Set PIN successful for user {$user->telephone}");
             return $this->successResponse([], 'PIN définitif défini avec succès. Vous pouvez maintenant utiliser votre compte normalement.');
         } catch (\Exception $e) {
+            \Log::error("Set PIN error for user " . (auth()->user() ? auth()->user()->telephone : 'unknown'), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->errorResponse('Erreur lors de la définition du PIN', 500);
         }
     }
@@ -198,15 +217,16 @@ class AuthController extends Controller
      * @OA\Post(
      *     path="/auth/login",
      *     summary="Connexion utilisateur",
-     *     description="Authentifie un utilisateur vérifié avec son numéro de téléphone et code PIN",
+     *     description="Authentifie un utilisateur vérifié avec son numéro de téléphone et code PIN (ou OTP pour la première connexion)",
      *     operationId="login",
      *     tags={"Authentification"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"telephone", "code_pin"},
+     *             required={"telephone"},
      *             @OA\Property(property="telephone", type="string", example="781562041", description="Numéro de téléphone"),
-     *             @OA\Property(property="code_pin", type="string", example="1234", description="Code PIN à 4 chiffres")
+     *             @OA\Property(property="code_pin", type="string", example="1234", description="Code PIN à 4 chiffres (pour les connexions après définition du PIN)"),
+     *             @OA\Property(property="otp", type="string", example="123456", description="Code OTP à 6 chiffres (pour la première connexion après vérification)")
      *         )
      *     ),
      *     @OA\Response(
@@ -237,11 +257,12 @@ class AuthController extends Controller
             $validated = $request->validated();
             $user = $this->authService->login(
                 $validated['telephone'],
-                $validated['code_pin']
+                $validated['code_pin'] ?? null,
+                $validated['otp'] ?? null
             );
 
             if (!$user) {
-                return $this->errorResponse('Téléphone ou code PIN incorrect', 401);
+                return $this->errorResponse('Téléphone, code PIN ou code OTP incorrect', 401);
             }
 
             return $this->successResponse([

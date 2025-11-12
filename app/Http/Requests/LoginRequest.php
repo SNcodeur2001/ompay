@@ -21,8 +21,21 @@ class LoginRequest extends FormRequest
     {
         return [
             'telephone' => 'required|string|regex:/^[0-9]{9}$/',
-            'code_pin' => 'required|string|regex:/^[0-9]{4}$/',
+            'code_pin' => 'nullable|string|regex:/^[0-9]{4}$/',
+            'otp' => 'nullable|string|regex:/^[0-9]{6}$/',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if (!$this->input('code_pin') && !$this->input('otp')) {
+                $validator->errors()->add('code_pin', 'Le code PIN ou le code OTP est obligatoire');
+            }
+        });
     }
 
     /**

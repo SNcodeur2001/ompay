@@ -54,27 +54,6 @@ Route::middleware('auth:api')->group(function () {
     });
 });
 
-// Protected routes
-Route::middleware('auth:api')->group(function () {
-    // Auth routes
-    Route::prefix('auth')->group(function () {
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::post('change-pin', [AuthController::class, 'changePin']);
-        Route::get('me', [AuthController::class, 'me']);
-    });
-
-    // Compte routes
-    Route::get('compte', [CompteController::class, 'show']);
-    Route::post('compte/depot', [CompteController::class, 'depot']);
-
-    // Transaction routes
-    Route::prefix('transactions')->group(function () {
-        Route::post('paiement', [TransactionController::class, 'paiement']);
-        Route::post('transfert', [TransactionController::class, 'transfert']);
-        Route::get('/', [TransactionController::class, 'index']);
-        Route::get('{reference}', [TransactionController::class, 'show']);
-    });
-});
 
 
 
